@@ -17,33 +17,37 @@
        stylesheets, so that when both sides use !important on equal-specificity
        selectors, this block wins the "last one in source order" tiebreak. */
 
-    /* 2/3/6. Consistent 16px gap between blocks (overrides the design-token gap-s utility).
-       Reinforced with html body prefix + explicit longhand column-gap/row-gap for
-       maximum precedence, and margins zeroed on the two forum-layout children so
-       nothing stacks on top of the 16px gap. */
+    /* Consistent 16px gap between blocks (overrides the design-token gap-s utility). */
     html body .gap-s { gap: 16px !important; column-gap: 16px !important; row-gap: 16px !important; }
-    html body [data-testid="forum-layout"] { gap: 16px !important; column-gap: 16px !important; padding-left: 0 !important; }
+    html body [data-testid="forum-layout"] {
+      gap: 16px !important; column-gap: 16px !important;
+      padding-left: 0 !important; padding-right: 16px !important;
+    }
     html body [data-testid="forum-layout"] > div { margin: 0 !important; }
-    /* the CONTENT wrapper's own left padding (px-xs) was stacking an extra 12px
-       on top of the 16px gap-s between it and the sidebar — drop just that side */
-    html body [data-testid="forum-layout"] > div:last-child { padding-left: 0 !important; }
+    /* the CONTENT wrapper's own left/right padding (px-xs) stacked on top of the
+       16px gap-s on both sides — drop it, leaving forum-layout's own 16px edge
+       padding (right side, above) as the single source of the right-hand gap */
+    html body [data-testid="forum-layout"] > div:last-child { padding-left: 0 !important; padding-right: 0 !important; }
 
-    /* 4. Forum sidebar width */
+    /* Forum sidebar width */
     [data-testid="forum-layout"] > div:first-child { width: 220px !important; }
 
-    /* 3. Content column + timeline together capped at 1000px, and the --rail-inset
-       var driving the floating title bar's right margin is updated to match the
-       new 106px reserved column so that bar stretches to the content's edge. */
+    /* Content column + timeline together capped at 1000px */
     main > div[style*="--sticky-top"] { max-width: 1000px !important; }
     main div[style*="--rail-inset"] { --rail-inset: 106px !important; }
-    /* 5. ...but once the timeline is hidden, the reserved space collapses to 0
-       so the title bar stretches to the FULL content width too. */
     .rc-hide-timeline main div[style*="--rail-inset"] { --rail-inset: 0px !important; }
+
+    /* After the 2nd breakpoint (forum sidebar hidden), center the
+       content+timeline block instead of keeping it pinned left */
+    .rc-hide-forum-sidebar main > div[style*="--sticky-top"] {
+      margin-left: auto !important;
+      margin-right: auto !important;
+    }
 
     /* Reserve exactly timeline-width + gap (90px + 16px = 106px) next to the content column */
     [class*="grid-cols-[1fr_156px]"] { grid-template-columns: 1fr 106px !important; }
 
-    /* 1. Timeline: 90px wide, no background, content left-aligned */
+    /* Timeline: 90px wide, no background, content left-aligned */
     div[class*="w-[140px]"][class*="right-0"] {
       width: 90px !important;
       background: transparent !important;
@@ -51,8 +55,10 @@
     [data-testid="comments-scrollbar"] { align-items: flex-start !important; }
     [data-testid="comments-scrollbar"] > [class*="justify-center"] { justify-content: flex-start !important; }
 
-    /* 2. Timeline track + thumb redesign */
-    [role="scrollbar"][aria-label="Comments position"] { left: 0 !important; transform: none !important; }
+    /* Timeline track + thumb */
+    [role="scrollbar"][aria-label="Comments position"] {
+      left: 0 !important; transform: none !important; cursor: pointer !important;
+    }
     [role="scrollbar"][aria-label="Comments position"] > div:first-child {
       width: 12px !important;
       left: 0 !important;
@@ -61,19 +67,17 @@
       border: 1px solid var(--border-secondary) !important;
       border-radius: 6px !important;
     }
-    /* neutralize the old thin line now that the track itself carries the background */
     [role="scrollbar"][aria-label="Comments position"] > div:first-child > div:first-child {
       background: transparent !important;
     }
-    /* 1. remove the horizontal pixel tick marks along the track */
     [role="scrollbar"][aria-label="Comments position"] > div:first-child > div:not(:first-child) {
       display: none !important;
     }
-    /* thumb: left-aligned, 12px wide, height = 1/3 of the track's own height */
     [data-scrollbar-thumb="true"] {
       left: 0 !important;
       transform: none !important;
       height: 33.3333% !important;
+      transition: top 200ms ease !important;
     }
     [data-scrollbar-thumb="true"] > div:first-child {
       width: 12px !important;
@@ -81,15 +85,71 @@
       margin-right: 0 !important;
     }
 
-    /* Floating title bar: hidden by default, shown only once the post is scrolled */
+    /* Hard-hide the app's own floating bar regardless of whether it exists. */
     [class*="pointer-events-none"][class*="inset-x-0"][class*="top-0"][class*="z-30"] {
-      opacity: 0 !important;
-    }
-    .rc-header-scrolled [class*="pointer-events-none"][class*="inset-x-0"][class*="top-0"][class*="z-30"] {
-      opacity: 1 !important;
+      display: none !important;
     }
 
-    /* === Breakpoints (driven by the accurate page-width classes on <html>, set below) === */
+    /* Custom condensed header bar — a real clone of the post's own header
+       card, so it automatically includes every element (back button, avatar,
+       display name, username, More button) and matches its exact styling. */
+    #rc-fixed-header-outer {
+      position: fixed;
+      top: 0;
+      z-index: 999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 150ms ease;
+      height: 72px;
+      overflow: hidden;
+      background: var(--bg-main);
+    }
+    html.rc-header-scrolled #rc-fixed-header-outer {
+      opacity: 1;
+    }
+    #rc-fixed-header-outer > * {
+      pointer-events: none;
+      border-top-left-radius: 16px !important;
+      border-top-right-radius: 16px !important;
+      border-bottom-left-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+      border-bottom: 1px solid var(--border-secondary) !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    html.rc-header-scrolled #rc-fixed-header-outer > * {
+      pointer-events: auto;
+    }
+
+    /* Reply avatar moves inside the reply card: the sticky avatar wrapper
+       keeps its scroll-tied sticky behavior but takes zero layout width, so
+       the card expands full width; the avatar then renders overlapping the
+       card's top-left corner (overflow: visible lets it escape the 0-width box). */
+    html body [data-comments-list="true"] [class*="sticky"][class*="z-10"][class*="shrink-0"] {
+      width: 0 !important;
+      overflow: visible !important;
+      margin-right: 0 !important;
+      padding-left: 0 !important;
+    }
+    /* offset the avatar itself 20px from the left, via transform (never
+       affects layout/vertical position, unlike margin or padding) */
+    html body [data-comments-list="true"] [class*="sticky"][class*="z-10"][class*="shrink-0"] > span:first-child {
+      transform: translateX(20px) !important;
+    }
+    /* the row's own gap-xxs was adding extra unwanted space before the card */
+    html body [data-comments-list="true"] [class*="animate-out"] {
+      width: 100% !important;
+      gap: 0 !important;
+    }
+    html body [data-testid^="comment-card-"] { width: 100% !important; max-width: none !important; }
+    /* username line: 20px (avatar inset) + 40px (avatar width) + 8px (name gap) = 68px */
+    html body [data-testid^="comment-card-"] > div:first-child > div:first-child {
+      padding-left: 68px !important;
+    }
+
+    /* Breakpoints (driven by the accurate page-width classes on <html>, set below) */
     .rc-hide-forum-sidebar [data-testid="forum-layout"] > div:first-child { display: none !important; }
     .rc-hide-timeline div[class*="w-[140px]"][class*="right-0"] { display: none !important; }
     .rc-hide-timeline [class*="grid-cols-[1fr_156px]"] { grid-template-columns: 1fr !important; }
@@ -117,20 +177,117 @@
       apply();
       setInterval(apply, 200);
 
-      // Floating title bar: show only once the post area is scrolled down.
-      var scrollHandlerAttached = null;
-      function initHeaderScroll(){
-        var scrollEl = document.querySelector('[id^="post-timeline-"]');
-        if (!scrollEl || scrollEl === scrollHandlerAttached) return;
-        scrollHandlerAttached = scrollEl;
-        function onScroll(){
-          document.documentElement.classList.toggle('rc-header-scrolled', scrollEl.scrollTop > 4);
-        }
-        scrollEl.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
+      // Sticky-look header: add the bottom border once actually scrolled.
+      // Polls via requestAnimationFrame instead of a 'scroll' listener, so it
+      // doesn't matter which element actually ends up scrolling.
+      function currentScrollTop(){
+        var el = document.querySelector('[id^="post-timeline-"]');
+        var elTop = el ? el.scrollTop : 0;
+        var winTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+        return Math.max(elTop, winTop);
       }
-      setInterval(initHeaderScroll, 200);
-      initHeaderScroll();
+      var lastScrolledState = null;
+      function headerLoop(){
+        var scrolled = currentScrollTop() > 4;
+        if (scrolled !== lastScrolledState) {
+          lastScrolledState = scrolled;
+          document.documentElement.classList.toggle('rc-header-scrolled', scrolled);
+        }
+        positionFixedHeader();
+        requestAnimationFrame(headerLoop);
+      }
+      requestAnimationFrame(headerLoop);
+
+      // Build our condensed header bar as a real clone of the post's own
+      // header card (guarantees every element — back button, avatar, name,
+      // username, More button — is present and styled identically).
+      var fixedHeaderBuilt = false;
+      function buildFixedHeader(){
+        if (fixedHeaderBuilt) return;
+        var header = document.querySelector('[data-testid="comments-header"]');
+        var card = header ? header.firstElementChild : null; // the actual styled card row
+        if (!card) return;
+        fixedHeaderBuilt = true;
+        var outer = document.createElement('div');
+        outer.id = 'rc-fixed-header-outer';
+        var clone = card.cloneNode(true);
+        outer.appendChild(clone);
+        document.body.appendChild(outer);
+      }
+      function positionFixedHeader(){
+        var outer = document.getElementById('rc-fixed-header-outer');
+        var content = document.querySelector('[class*="grid-cols-[1fr_156px]"] > div:first-child');
+        if (!outer || !content) return;
+        var rect = content.getBoundingClientRect();
+        outer.style.left = rect.left + 'px';
+        outer.style.width = rect.width + 'px';
+      }
+      var fixedHeaderTries = 0;
+      var fixedHeaderTimer = setInterval(function () {
+        fixedHeaderTries++;
+        buildFixedHeader();
+        if (fixedHeaderBuilt || fixedHeaderTries > 25) clearInterval(fixedHeaderTimer);
+      }, 200);
+
+      // Timeline: 3 fixed anchors — Top / first reply / last reply.
+      // (Position + label only, no click handling.)
+      var timelineInitialized = null;
+      function initTimeline(){
+        var scrollEl = document.querySelector('[id^="post-timeline-"]');
+        var thumb = document.querySelector('[data-scrollbar-thumb="true"]');
+        var track = document.querySelector('[role="scrollbar"][aria-label="Comments position"]');
+        var cards = document.querySelectorAll('[data-comment-id]');
+        if (!scrollEl || !thumb || !track || !cards.length) return;
+        if (timelineInitialized === scrollEl) return;
+        timelineInitialized = scrollEl;
+
+        var firstCard = cards[0];
+        var lastCard = cards[cards.length - 1];
+        var numberEl = thumb.querySelector('span.text-xl');
+        var slashEl = numberEl ? numberEl.nextElementSibling : null;
+        var total = cards.length + 1; // Top + one anchor per reply
+
+        function offsetWithin(el){
+          var containerTop = scrollEl.getBoundingClientRect().top;
+          return el.getBoundingClientRect().top - containerTop + scrollEl.scrollTop;
+        }
+
+        function updateThumb(){
+          var scrollTop = scrollEl.scrollTop;
+          var trackH = track.getBoundingClientRect().height;
+          var thumbH = trackH / 3;
+
+          var idx = 0; // 0 = Top, k+1 = at/after reply k
+          for (var k = 0; k < cards.length; k++) {
+            if (scrollTop >= offsetWithin(cards[k]) - 4) idx = k + 1;
+          }
+
+          var pos = (idx / (total - 1)) * (trackH - thumbH);
+          var label = idx === 0 ? 'Top' : String(idx + 1);
+          var showSlash = idx !== 0;
+
+          thumb.style.top = pos + 'px';
+          if (numberEl) {
+            numberEl.textContent = label;
+            numberEl.classList.toggle('text-xl', label !== 'Top');
+            numberEl.classList.toggle('text-base', label === 'Top');
+          }
+          if (slashEl) {
+            slashEl.textContent = '/' + total;
+            slashEl.style.display = showSlash ? '' : 'none';
+          }
+        }
+
+        scrollEl.addEventListener('scroll', updateThumb, { passive: true });
+        window.addEventListener('resize', updateThumb);
+        (function rafLoop(){ updateThumb(); requestAnimationFrame(rafLoop); })();
+      }
+      var timelineTries = 0;
+      var timelineTimer = setInterval(function () {
+        timelineTries++;
+        initTimeline();
+        if (timelineInitialized || timelineTries > 25) clearInterval(timelineTimer);
+      }, 200);
     })();
     </script></head>
   <body>
