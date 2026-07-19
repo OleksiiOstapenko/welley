@@ -107,20 +107,26 @@
     html.rc-header-scrolled #rc-fixed-header-outer {
       opacity: 1;
     }
-    #rc-fixed-header-outer > * {
+    #rc-fixed-header-bar {
       pointer-events: none;
-      border-top-left-radius: 16px !important;
-      border-top-right-radius: 16px !important;
-      border-bottom-left-radius: 0 !important;
-      border-bottom-right-radius: 0 !important;
-      box-shadow: none !important;
-      border: none !important;
-      border-bottom: 1px solid var(--border-secondary) !important;
-      width: 100% !important;
-      height: 100% !important;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      height: 100%;
+      padding: 0 16px;
+      box-sizing: border-box;
+      background: var(--bg-primary);
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      border-bottom: 1px solid var(--border-secondary);
     }
-    html.rc-header-scrolled #rc-fixed-header-outer > * {
+    html.rc-header-scrolled #rc-fixed-header-bar {
       pointer-events: auto;
+    }
+    #rc-fixed-header-title {
+      flex: 1;
+      min-width: 0;
     }
 
     /* Reply avatar moves inside the reply card: the sticky avatar wrapper
@@ -296,14 +302,31 @@
       var fixedHeaderBuilt = false;
       function buildFixedHeader(){
         if (fixedHeaderBuilt) return;
-        var header = document.querySelector('[data-testid="comments-header"]');
-        var card = header ? header.firstElementChild : null; // the actual styled card row
-        if (!card) return;
+        var backBtn = document.querySelector('[aria-label="Go back"]');
+        var avatarSpan = document.querySelector('[data-testid="comment-header-user-avatar"] [data-testid^="userAvatar-"]');
+        var moreBtn = document.querySelector('[data-testid="post-meatballs-menu"]');
+        var titleSpan = document.querySelector('[data-testid="post-content-title"] span');
+        if (!backBtn || !avatarSpan || !titleSpan) return;
         fixedHeaderBuilt = true;
+
         var outer = document.createElement('div');
         outer.id = 'rc-fixed-header-outer';
-        var clone = card.cloneNode(true);
-        outer.appendChild(clone);
+
+        var bar = document.createElement('div');
+        bar.id = 'rc-fixed-header-bar';
+
+        bar.appendChild(backBtn.cloneNode(true));
+        bar.appendChild(avatarSpan.cloneNode(true));
+
+        var titleEl = document.createElement('div');
+        titleEl.id = 'rc-fixed-header-title';
+        titleEl.className = 'truncate text-lg font-semibold text-content-primary';
+        titleEl.textContent = titleSpan.textContent;
+        bar.appendChild(titleEl);
+
+        if (moreBtn) bar.appendChild(moreBtn.cloneNode(true));
+
+        outer.appendChild(bar);
         document.body.appendChild(outer);
       }
       function positionFixedHeader(){
