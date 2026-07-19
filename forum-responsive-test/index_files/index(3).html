@@ -210,6 +210,12 @@
       outline: none !important;
       border: none !important;
     }
+    /* Post title in the page body (not the floating header) */
+    html body [data-testid="post-content-title"] {
+      font-size: 36px !important;
+      line-height: 42px !important;
+    }
+
     .rc-hide-forum-sidebar [data-testid="forum-layout"] > div:first-child { display: none !important; }
     .rc-hide-timeline div[class*="w-[140px]"][class*="right-0"] { display: none !important; }
     .rc-hide-timeline [class*="grid-cols-[1fr_156px]"] { grid-template-columns: 1fr !important; }
