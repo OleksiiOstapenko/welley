@@ -132,11 +132,15 @@
       overflow: visible !important;
       margin-right: 0 !important;
       padding-left: 0 !important;
+      padding-top: 20px !important;
+      bottom: 20px !important;
     }
-    /* offset the avatar itself 20px from the left, via transform (never
-       affects layout/vertical position, unlike margin or padding) */
+    /* offset the avatar itself 20px from the left. Uses margin (not
+       transform — transform has no effect on plain inline <span> elements
+       per the CSS spec, which is why it silently did nothing before). */
     html body [data-comments-list="true"] [class*="sticky"][class*="z-10"][class*="shrink-0"] > span:first-child {
-      transform: translateX(20px) !important;
+      display: inline-block !important;
+      margin-left: 20px !important;
     }
     /* the row's own gap-xxs was adding extra unwanted space before the card */
     html body [data-comments-list="true"] [class*="animate-out"] {
@@ -144,8 +148,9 @@
       gap: 0 !important;
     }
     html body [data-testid^="comment-card-"] { width: 100% !important; max-width: none !important; }
-    /* username line: 20px (avatar inset) + 40px (avatar width) + 8px (name gap) = 68px */
-    html body [data-testid^="comment-card-"] > div:first-child > div:first-child {
+    /* whole card content (name row, body text, vote/reply buttons) indented
+       68px = 20px (avatar inset) + 40px (avatar width) + 8px (name gap) */
+    html body [data-testid^="comment-card-"] > div:first-child {
       padding-left: 68px !important;
     }
 
