@@ -133,7 +133,7 @@
       margin-right: 0 !important;
       padding-left: 0 !important;
       padding-top: 20px !important;
-      bottom: 20px !important;
+      bottom: 60px !important;
     }
     /* offset the avatar itself 20px from the left. Uses margin (not
        transform — transform has no effect on plain inline <span> elements
@@ -154,7 +154,56 @@
       padding-left: 68px !important;
     }
 
-    /* Breakpoints (driven by the accurate page-width classes on <html>, set below) */
+    /* Reply input: styled like a reply card, with the user's own avatar to
+       the left — rendered as a ::before pseudo-element (no DOM insertion,
+       so there's zero risk of disturbing React's own tree). */
+    html body div.flex.flex-col.p-0\.5:has(input[data-testid="comment-input"]) {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 8px !important;
+      padding: 20px !important;
+      background: var(--bg-primary) !important;
+      border-radius: 16px !important;
+      border: 1px solid var(--border-secondary) !important;
+      position: relative !important;
+      z-index: 2 !important;
+      margin-top: 16px !important;
+    }
+    /* the shadow itself lives in a separate overlay (below) since box-shadow
+       here would get clipped by the scrollable ancestor's overflow:auto */
+    #rc-input-shadow {
+      position: fixed;
+      z-index: 1;
+      pointer-events: none;
+      border-radius: 16px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+      transition: box-shadow 150ms ease;
+    }
+    #rc-input-shadow.rc-hover {
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    html body div.flex.flex-col.p-0\.5:has(input[data-testid="comment-input"])::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      flex-shrink: 0;
+      background-image: url('fl_01krjfzdryemebpwqq6d4bzzhq.avif');
+      background-size: cover;
+      background-position: center;
+    }
+    html body div.flex.flex-col.p-0\.5:has(input[data-testid="comment-input"]) > form {
+      flex: 1 !important;
+      min-width: 0 !important;
+    }
+    html body [data-testid="comment-input"] {
+      background: transparent !important;
+      padding: 0 !important;
+      outline: none !important;
+      border: none !important;
+    }
     .rc-hide-forum-sidebar [data-testid="forum-layout"] > div:first-child { display: none !important; }
     .rc-hide-timeline div[class*="w-[140px]"][class*="right-0"] { display: none !important; }
     .rc-hide-timeline [class*="grid-cols-[1fr_156px]"] { grid-template-columns: 1fr !important; }
@@ -202,6 +251,44 @@
         requestAnimationFrame(headerLoop);
       }
       requestAnimationFrame(headerLoop);
+
+      // Reply input shadow: rendered as a separate fixed overlay (see CSS)
+      // since the scroll container's overflow:auto clips a normal box-shadow.
+      var inputShadowBuilt = false;
+      function buildInputShadow(){
+        if (inputShadowBuilt) return;
+        var card = document.querySelector('div.flex.flex-col.p-0\\.5:has(input[data-testid="comment-input"])');
+        if (!card) return;
+        inputShadowBuilt = true;
+        var el = document.createElement('div');
+        el.id = 'rc-input-shadow';
+        document.body.appendChild(el);
+        card.addEventListener('mouseenter', function () { el.classList.add('rc-hover'); });
+        card.addEventListener('mouseleave', function () { el.classList.remove('rc-hover'); });
+      }
+      function positionInputShadow(){
+        var shadowEl = document.getElementById('rc-input-shadow');
+        var card = document.querySelector('div.flex.flex-col.p-0\\.5:has(input[data-testid="comment-input"])');
+        var scrollEl = document.querySelector('[id^="post-timeline-"]');
+        if (!shadowEl || !card || !scrollEl) return;
+        var cardRect = card.getBoundingClientRect();
+        var scrollRect = scrollEl.getBoundingClientRect();
+        var visible = cardRect.bottom > scrollRect.top && cardRect.top < scrollRect.bottom && cardRect.width > 0;
+        shadowEl.style.display = visible ? 'block' : 'none';
+        if (visible) {
+          shadowEl.style.left = cardRect.left + 'px';
+          shadowEl.style.top = cardRect.top + 'px';
+          shadowEl.style.width = cardRect.width + 'px';
+          shadowEl.style.height = cardRect.height + 'px';
+        }
+      }
+      var inputShadowTries = 0;
+      var inputShadowTimer = setInterval(function () {
+        inputShadowTries++;
+        buildInputShadow();
+        if (inputShadowBuilt || inputShadowTries > 25) clearInterval(inputShadowTimer);
+      }, 200);
+      (function inputShadowLoop(){ positionInputShadow(); requestAnimationFrame(inputShadowLoop); })();
 
       // Build our condensed header bar as a real clone of the post's own
       // header card (guarantees every element — back button, avatar, name,
